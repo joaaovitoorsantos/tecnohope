@@ -1,10 +1,32 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Loader2, Clock, Calendar } from 'lucide-react';
+import { Loader2, Clock, Calendar, Building2 } from 'lucide-react';
+
+interface Author {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarURL: string;
+  roleColor: string;
+}
+
+interface Embed {
+  title?: string;
+  description?: string;
+  color?: number;
+}
+
+interface Attachment {
+  url: string;
+  name: string;
+}
 
 interface Message {
   content: string;
+  author: Author;
+  attachments: Attachment[];
+  embeds: Embed[];
   timestamp: string;
 }
 
@@ -13,40 +35,24 @@ interface TranscriptData {
   messages: Message[];
   createdAt: string;
   closedAt: string;
+  guildId: string;
+  guildName: string;
 }
 
 // Usando o proxy da Vercel
 const API_SERVER = '/api';
 
-// Função para extrair nome do usuário e conteúdo da mensagem
-function parseMessage(content: string): { author: string; content: string; timestamp?: string } {
-  // Verifica se é uma mensagem com timestamp
-  const timestampMatch = content.match(/^\[([\d/,: ]+)\] ([^:]+): (.+)$/);
-  if (timestampMatch) {
-    return {
-      timestamp: timestampMatch[1],
-      author: timestampMatch[2],
-      content: timestampMatch[3]
-    };
-  }
-
-  return {
-    author: 'Sistema',
-    content: content
-  };
+// Função para converter menções em texto legível
+function formatMentions(content: string): string {
+  return content
+    .replace(/<@&(\d+)>/g, '@Role') // Menções de cargo
+    .replace(/<@!?(\d+)>/g, '@User') // Menções de usuário
+    .replace(/<#(\d+)>/g, '#Channel'); // Menções de canal
 }
 
-// Função para verificar se é uma URL de imagem
-function isImageUrl(text: string): boolean {
-  const imageExtensions = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i;
-  const urlMatch = text.match(/\bhttps?:\/\/\S+/);
-  return urlMatch ? imageExtensions.test(urlMatch[0]) : false;
-}
-
-// Função para extrair URL de uma string
-function extractUrl(text: string): string | null {
-  const urlMatch = text.match(/\bhttps?:\/\/\S+/);
-  return urlMatch ? urlMatch[0] : null;
+// Função para converter emojis personalizados em texto
+function formatEmojis(content: string): string {
+  return content.replace(/<:(.*?):(\d+)>/g, ':$1:');
 }
 
 export default function TranscriptViewer() {
@@ -160,7 +166,7 @@ export default function TranscriptViewer() {
           <h1 className="text-2xl font-bold text-[#005012] mb-2">
             Transcript do Ticket #{transcript.ticketCode}
           </h1>
-          <div className="flex items-center gap-4 text-sm text-gray-400 mt-2">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mt-2">
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
               <span>Criado: {new Date(transcript.createdAt).toLocaleString('pt-BR')}</span>
@@ -169,50 +175,98 @@ export default function TranscriptViewer() {
               <Clock className="w-4 h-4" />
               <span>Fechado: {new Date(transcript.closedAt).toLocaleString('pt-BR')}</span>
             </div>
+            <div className="flex items-center gap-1">
+              <Building2 className="w-4 h-4" />
+              <span>Servidor: {transcript.guildName}</span>
+            </div>
           </div>
           <div className="h-1 w-32 bg-[#005012]/20 rounded-full mt-4" />
         </div>
 
         <div className="space-y-4">
-          {transcript.messages.map((message, index) => {
-            const parsedMessage = parseMessage(message.content);
-            const imageUrl = extractUrl(parsedMessage.content);
-            const isImage = imageUrl && isImageUrl(imageUrl);
-
-            return (
-              <div
-                key={index}
-                className="bg-gray-900/50 rounded-lg p-4 border border-gray-800"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-[#005012]">
-                        {parsedMessage.author}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {parsedMessage.timestamp || new Date(message.timestamp).toLocaleString('pt-BR')}
-                      </span>
+          {transcript.messages.map((message, index) => (
+            <div
+              key={index}
+              className="bg-gray-900/50 rounded-lg p-4 border border-gray-800"
+            >
+              <div className="flex items-start gap-3">
+                <img
+                  src={message.author.avatarURL}
+                  alt={message.author.displayName}
+                  className="w-10 h-10 rounded-full"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span 
+                      className="font-semibold"
+                      style={{ color: message.author.roleColor || '#005012' }}
+                    >
+                      {message.author.displayName}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(message.timestamp).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  
+                  {/* Conteúdo da mensagem */}
+                  {message.content && (
+                    <div className="text-gray-300 break-words whitespace-pre-wrap">
+                      {formatEmojis(formatMentions(message.content))}
                     </div>
-                    <div className="text-gray-300 break-words">
-                      {isImage ? (
-                        <div className="mt-2">
-                          <img 
-                            src={imageUrl} 
-                            alt="Anexo" 
-                            className="max-w-full rounded-lg border border-gray-700"
-                            style={{ maxHeight: '400px' }}
-                          />
+                  )}
+
+                  {/* Embeds */}
+                  {message.embeds.map((embed, i) => (
+                    <div 
+                      key={i}
+                      className="mt-2 border-l-4 bg-gray-900/50 p-3 rounded-r-md"
+                      style={{ borderLeftColor: embed.color ? `#${embed.color.toString(16)}` : '#005012' }}
+                    >
+                      {embed.title && (
+                        <div className="font-semibold mb-1">
+                          {formatEmojis(embed.title)}
                         </div>
-                      ) : (
-                        parsedMessage.content
+                      )}
+                      {embed.description && (
+                        <div className="text-sm text-gray-300 whitespace-pre-wrap">
+                          {formatMentions(embed.description)}
+                        </div>
                       )}
                     </div>
-                  </div>
+                  ))}
+
+                  {/* Anexos */}
+                  {message.attachments.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {message.attachments.map((attachment, i) => {
+                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.url);
+                        return isImage ? (
+                          <div key={i} className="mt-2">
+                            <img
+                              src={attachment.url}
+                              alt={attachment.name}
+                              className="max-w-full rounded-lg border border-gray-700"
+                              style={{ maxHeight: '400px' }}
+                            />
+                          </div>
+                        ) : (
+                          <a
+                            key={i}
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 px-3 py-1 rounded-md transition-colors"
+                          >
+                            📎 {attachment.name}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
     </div>
