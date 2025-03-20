@@ -73,6 +73,9 @@ interface BotLogs {
   [botName: string]: LogLine[];
 }
 
+// Constantes para o servidor
+const API_SERVER = 'http://104.234.224.196:4000';
+
 export default function Home() {
   const [bots, setBots] = useState<Bot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +101,7 @@ export default function Home() {
     try {
       setIsRefreshing(true);
       setError(null);
-      const res = await fetch("/api/bots");
+      const res = await fetch(`${API_SERVER}/bots`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.details || 'Erro ao carregar bots');
@@ -126,9 +129,9 @@ export default function Home() {
     try {
       setActionInProgress(prev => ({ ...prev, [actionKey]: true }));
       
-      const res = await fetch(`/api/bots/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${API_SERVER}/bots/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ botName }),
       });
 
@@ -257,7 +260,7 @@ export default function Home() {
   const fetchInitialLogs = async (botName: string) => {
     try {
       setIsLoadingLogs(true);
-      const res = await fetch(`/api/bots/logs/${botName}`);
+      const res = await fetch(`${API_SERVER}/bots/logs/${botName}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.details || 'Erro ao carregar logs');
@@ -423,10 +426,10 @@ export default function Home() {
                     <th className="hidden md:table-cell px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-300">RAM</th>
                     <th className="hidden md:table-cell px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-300">CPU</th>
                     <th className="px-3 py-3 text-right text-xs md:text-sm font-semibold text-gray-300">Ações</th>
-                  </tr>
-                </thead>
+          </tr>
+        </thead>
                 <tbody className="divide-y divide-gray-800">
-                  {bots.map((bot) => (
+          {bots.map((bot) => (
                     <tr key={bot.pm_id} className="hover:bg-gray-800/30 transition-colors">
                       <td className="px-3 py-3 text-xs md:text-sm text-gray-100">{bot.name}</td>
                       <td className="px-3 py-3">
@@ -534,11 +537,11 @@ export default function Home() {
                             <span className="hidden md:inline">Console</span>
                           </Button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
             </div>
 
             {/* Console do Bot */}

@@ -19,6 +19,9 @@ app.use(cors({
 
 app.use(express.json());
 
+// Armazenar conexões de transcript
+const transcriptClients = new Map();
+
 // Configuração do WebSocket Server
 const wss = new WebSocket.Server({ 
   port: WS_PORT,
@@ -442,6 +445,141 @@ app.get("/bots/logs/:botName", async (req, res) => {
   }
 });
 
+// Rota para obter o transcript
+app.get('/bots/transcript/:botName', async (req, res) => {
+  try {
+    const { botName } = req.params;
+    const transcriptPath = path.join(process.cwd(), 'transcripts', `transcript-${botName}.txt`);
+    console.log('Procurando transcript em:', transcriptPath);
+
+    // Verifica se o arquivo existe
+    try {
+      await fs.access(transcriptPath);
+    } catch (error) {
+      console.log('Transcript não encontrado:', error.message);
+      return res.status(404).json({
+        success: false,
+        details: 'Transcript não encontrado'
+      });
+    }
+
+    // Lê o conteúdo do arquivo
+    const transcriptContent = await fs.readFile(transcriptPath, 'utf8');
+    let transcriptData;
+    
+    try {
+      transcriptData = JSON.parse(transcriptContent);
+    } catch (error) {
+      console.error('Erro ao fazer parse do transcript:', error);
+      return res.status(500).json({
+        success: false,
+        details: 'Erro ao processar o transcript'
+      });
+    }
+
+    res.json({
+      success: true,
+      transcript: transcriptData
+    });
+  } catch (error) {
+    console.error('Erro ao ler transcript:', error);
+    res.status(500).json({
+      success: false,
+      details: 'Erro ao ler o transcript'
+    });
+  }
+});
+
+// WebSocket para atualizações em tempo real do transcript
+const wsServer = new WebSocket.Server({ port: 4002 });
+const transcriptSubscribers = new Map();
+
+wsServer.on('connection', (ws) => {
+  console.log('Nova conexão WebSocket');
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.type === 'subscribe_transcript') {
+        const { botName } = data;
+        if (!transcriptSubscribers.has(botName)) {
+          transcriptSubscribers.set(botName, new Set());
+        }
+        transcriptSubscribers.get(botName).add(ws);
+        
+        ws.botName = botName;
+        console.log(`Cliente subscrito ao transcript do bot ${botName}`);
+      }
+    } catch (error) {
+      console.error('Erro ao processar mensagem WebSocket:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.botName && transcriptSubscribers.has(ws.botName)) {
+      transcriptSubscribers.get(ws.botName).delete(ws);
+      if (transcriptSubscribers.get(ws.botName).size === 0) {
+        transcriptSubscribers.delete(ws.botName);
+      }
+    }
+    console.log('Cliente WebSocket desconectado');
+  });
+});
+
+// Função para enviar atualizações do transcript
+function sendTranscriptUpdate(botName, content) {
+  if (transcriptSubscribers.has(botName)) {
+    const subscribers = transcriptSubscribers.get(botName);
+    const message = JSON.stringify({
+      type: 'transcript_update',
+      data: content
+    });
+    
+    subscribers.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+}
+
+// Rota para salvar o transcript
+app.post('/bots/save-transcript', async (req, res) => {
+  try {
+    const { ticketCode, content } = req.body;
+    
+    if (!ticketCode || !content) {
+      return res.status(400).json({
+        success: false,
+        details: 'ticketCode e content são obrigatórios'
+      });
+    }
+
+    // Cria o diretório transcripts se não existir
+    const transcriptDir = path.join(process.cwd(), 'transcripts');
+    await fs.mkdir(transcriptDir, { recursive: true });
+
+    // Salva o arquivo do transcript
+    const transcriptPath = path.join(transcriptDir, `transcript-${ticketCode}.txt`);
+    await fs.writeFile(transcriptPath, JSON.stringify(content, null, 2), 'utf8');
+
+    console.log(`Transcript salvo com sucesso em: ${transcriptPath}`);
+
+    res.json({
+      success: true,
+      message: 'Transcript salvo com sucesso',
+      path: transcriptPath
+    });
+  } catch (error) {
+    console.error('Erro ao salvar transcript:', error);
+    res.status(500).json({
+      success: false,
+      details: 'Erro ao salvar o transcript'
+    });
+  }
+});
+
 // Rota de status do servidor
 app.get("/status", (req, res) => {
   res.json({ 
@@ -461,5 +599,7 @@ app.listen(PORT, () => {
   console.log(`- POST /bots/restart   : Reinicia um bot`);
   console.log(`- POST /bots/memory-limit : Atualiza limite de memória`);
   console.log(`- GET  /bots/logs/:botName : Obter logs do bot`);
+  console.log(`- GET  /bots/transcript/:botName : Obter transcript do bot`);
+  console.log(`- POST /bots/save-transcript : Salvar transcript`);
   console.log(`- GET  /status         : Status do servidor`);
 });
