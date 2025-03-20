@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Loader2, Clock, Calendar, Building2 } from 'lucide-react';
+import { Loader2, Clock, Calendar, Building2, User } from 'lucide-react';
 
 interface Author {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarURL: string;
-  roleColor: string;
+  id?: string;
+  username?: string;
+  displayName?: string;
+  avatarURL?: string;
+  roleColor?: string;
 }
 
 interface Embed {
@@ -24,7 +24,7 @@ interface Attachment {
 
 interface Message {
   content: string;
-  author: Author;
+  author?: Author;
   attachments: Attachment[];
   embeds: Embed[];
   timestamp: string;
@@ -53,6 +53,15 @@ function formatMentions(content: string): string {
 // Função para converter emojis personalizados em texto
 function formatEmojis(content: string): string {
   return content.replace(/<:(.*?):(\d+)>/g, ':$1:');
+}
+
+// Função para obter informações do autor com fallbacks
+function getAuthorInfo(author?: Author) {
+  return {
+    name: author?.displayName || author?.username || 'Usuário Desconhecido',
+    avatar: author?.avatarURL || '/default-avatar.png',
+    color: author?.roleColor || '#005012'
+  };
 }
 
 export default function TranscriptViewer() {
@@ -184,89 +193,108 @@ export default function TranscriptViewer() {
         </div>
 
         <div className="space-y-4">
-          {transcript.messages.map((message, index) => (
-            <div
-              key={index}
-              className="bg-gray-900/50 rounded-lg p-4 border border-gray-800"
-            >
-              <div className="flex items-start gap-3">
-                <img
-                  src={message.author.avatarURL}
-                  alt={message.author.displayName}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span 
-                      className="font-semibold"
-                      style={{ color: message.author.roleColor || '#005012' }}
-                    >
-                      {message.author.displayName}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(message.timestamp).toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                  
-                  {/* Conteúdo da mensagem */}
-                  {message.content && (
-                    <div className="text-gray-300 break-words whitespace-pre-wrap">
-                      {formatEmojis(formatMentions(message.content))}
+          {transcript.messages.map((message, index) => {
+            const authorInfo = getAuthorInfo(message.author);
+
+            return (
+              <div
+                key={index}
+                className="bg-gray-900/50 rounded-lg p-4 border border-gray-800"
+              >
+                <div className="flex items-start gap-3">
+                  {authorInfo.avatar ? (
+                    <img
+                      src={authorInfo.avatar}
+                      alt={authorInfo.name}
+                      className="w-10 h-10 rounded-full"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = '/default-avatar.png';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">
+                      <User className="w-6 h-6 text-gray-400" />
                     </div>
                   )}
-
-                  {/* Embeds */}
-                  {message.embeds.map((embed, i) => (
-                    <div 
-                      key={i}
-                      className="mt-2 border-l-4 bg-gray-900/50 p-3 rounded-r-md"
-                      style={{ borderLeftColor: embed.color ? `#${embed.color.toString(16)}` : '#005012' }}
-                    >
-                      {embed.title && (
-                        <div className="font-semibold mb-1">
-                          {formatEmojis(embed.title)}
-                        </div>
-                      )}
-                      {embed.description && (
-                        <div className="text-sm text-gray-300 whitespace-pre-wrap">
-                          {formatMentions(embed.description)}
-                        </div>
-                      )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span 
+                        className="font-semibold"
+                        style={{ color: authorInfo.color }}
+                      >
+                        {authorInfo.name}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(message.timestamp).toLocaleString('pt-BR')}
+                      </span>
                     </div>
-                  ))}
+                    
+                    {/* Conteúdo da mensagem */}
+                    {message.content && (
+                      <div className="text-gray-300 break-words whitespace-pre-wrap">
+                        {formatEmojis(formatMentions(message.content))}
+                      </div>
+                    )}
 
-                  {/* Anexos */}
-                  {message.attachments.length > 0 && (
-                    <div className="mt-2 space-y-2">
-                      {message.attachments.map((attachment, i) => {
-                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.url);
-                        return isImage ? (
-                          <div key={i} className="mt-2">
-                            <img
-                              src={attachment.url}
-                              alt={attachment.name}
-                              className="max-w-full rounded-lg border border-gray-700"
-                              style={{ maxHeight: '400px' }}
-                            />
+                    {/* Embeds */}
+                    {message.embeds?.map((embed, i) => (
+                      <div 
+                        key={i}
+                        className="mt-2 border-l-4 bg-gray-900/50 p-3 rounded-r-md"
+                        style={{ borderLeftColor: embed.color ? `#${embed.color.toString(16)}` : '#005012' }}
+                      >
+                        {embed.title && (
+                          <div className="font-semibold mb-1">
+                            {formatEmojis(embed.title)}
                           </div>
-                        ) : (
-                          <a
-                            key={i}
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 px-3 py-1 rounded-md transition-colors"
-                          >
-                            📎 {attachment.name}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
+                        {embed.description && (
+                          <div className="text-sm text-gray-300 whitespace-pre-wrap">
+                            {formatMentions(embed.description)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Anexos */}
+                    {message.attachments?.length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {message.attachments.map((attachment, i) => {
+                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.url);
+                          return isImage ? (
+                            <div key={i} className="mt-2">
+                              <img
+                                src={attachment.url}
+                                alt={attachment.name}
+                                className="max-w-full rounded-lg border border-gray-700"
+                                style={{ maxHeight: '400px' }}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <a
+                              key={i}
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 px-3 py-1 rounded-md transition-colors"
+                            >
+                              📎 {attachment.name}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
