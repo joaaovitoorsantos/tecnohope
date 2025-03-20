@@ -55,15 +55,6 @@ function formatEmojis(content: string): string {
   return content.replace(/<:(.*?):(\d+)>/g, ':$1:');
 }
 
-// Função para obter informações do autor com fallbacks
-function getAuthorInfo(author?: Author) {
-  return {
-    name: author?.displayName || author?.username || 'Usuário Desconhecido',
-    avatar: author?.avatarURL || '/default-avatar.png',
-    color: author?.roleColor || '#005012'
-  };
-}
-
 export default function TranscriptViewer() {
   const router = useRouter();
   const { ticketCode } = router.query;
@@ -194,7 +185,9 @@ export default function TranscriptViewer() {
 
         <div className="space-y-4">
           {transcript.messages.map((message, index) => {
-            const authorInfo = getAuthorInfo(message.author);
+            const hasAvatar = message.author?.avatarURL && message.author.avatarURL.length > 0;
+            const displayName = message.author?.displayName || message.author?.username || 'Usuário Desconhecido';
+            const roleColor = message.author?.roleColor || '#005012';
 
             return (
               <div
@@ -202,15 +195,16 @@ export default function TranscriptViewer() {
                 className="bg-gray-900/50 rounded-lg p-4 border border-gray-800"
               >
                 <div className="flex items-start gap-3">
-                  {authorInfo.avatar ? (
+                  {hasAvatar ? (
                     <img
-                      src={authorInfo.avatar}
-                      alt={authorInfo.name}
-                      className="w-10 h-10 rounded-full"
+                      src={message.author?.avatarURL}
+                      alt={displayName}
+                      className="w-10 h-10 rounded-full bg-gray-800"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.onerror = null;
-                        target.src = '/default-avatar.png';
+                        if (target.src !== '/default-avatar.png') {
+                          target.src = '/default-avatar.png';
+                        }
                       }}
                     />
                   ) : (
@@ -222,9 +216,9 @@ export default function TranscriptViewer() {
                     <div className="flex items-center gap-2 mb-1">
                       <span 
                         className="font-semibold"
-                        style={{ color: authorInfo.color }}
+                        style={{ color: roleColor }}
                       >
-                        {authorInfo.name}
+                        {displayName}
                       </span>
                       <span className="text-xs text-gray-500">
                         {new Date(message.timestamp).toLocaleString('pt-BR')}
