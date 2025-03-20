@@ -35,7 +35,7 @@ const getStatusInfo = (status: string) => {
       return {
         text: 'Online',
         icon: Power,
-        className: 'bg-[#00ff14]/10 text-[#00ff14] border border-[#00ff14]/20'
+        className: 'bg-[#005012]/10 text-[#005012] border border-[#005012]/20'
       };
     case 'stopped':
       return {
@@ -98,7 +98,7 @@ export default function Home() {
     try {
       setIsRefreshing(true);
       setError(null);
-      const res = await fetch("http://104.234.224.196:4000/bots");
+      const res = await fetch("/api/bots");
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.details || 'Erro ao carregar bots');
@@ -126,7 +126,7 @@ export default function Home() {
     try {
       setActionInProgress(prev => ({ ...prev, [actionKey]: true }));
       
-      const res = await fetch(`http://104.234.224.196:4000/bots/${action}`, {
+      const res = await fetch(`/api/bots/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ botName }),
@@ -257,7 +257,7 @@ export default function Home() {
   const fetchInitialLogs = async (botName: string) => {
     try {
       setIsLoadingLogs(true);
-      const res = await fetch(`http://104.234.224.196:4000/bots/logs/${botName}`);
+      const res = await fetch(`/api/bots/logs/${botName}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.details || 'Erro ao carregar logs');
@@ -393,14 +393,14 @@ export default function Home() {
               alt="TecnoHope Logo" 
               className="w-10 h-10 md:w-12 md:h-12 object-contain"
             />
-            <h1 className="text-xl md:text-2xl font-bold text-[#00ff14]">
+            <h1 className="text-xl md:text-2xl font-bold text-[#005012]">
               Tecno Hope - Gerenciamento de Bots
             </h1>
           </div>
           <Button 
             onClick={fetchBots} 
             variant="outline"
-            className="border-[#00ff14] text-[#00ff14] hover:bg-[#00ff14]/10 flex items-center gap-2 transition-all duration-200 w-full md:w-auto"
+            className="border-[#005012] text-[#005012] hover:bg-[#005012]/10 flex items-center gap-2 transition-all duration-200 w-full md:w-auto"
             disabled={isRefreshing}
           >
             <RefreshCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -449,7 +449,7 @@ export default function Home() {
                                 className="h-full transition-all duration-300"
                                 style={{ 
                                   width: `${Math.min(100, (bot.monit.memory / bot.monit.memory_limit) * 100)}%`,
-                                  backgroundColor: bot.monit.memory / bot.monit.memory_limit > 0.8 ? '#ef4444' : '#00ff14'
+                                  backgroundColor: bot.monit.memory / bot.monit.memory_limit > 0.8 ? '#ef4444' : '#005012'
                                 }}
                               />
                             </div>
@@ -471,7 +471,7 @@ export default function Home() {
                             className={`inline-flex items-center gap-1 transition-all duration-200 px-2 py-1 ${
                               bot.status === 'online' || actionInProgress[getActionKey(bot.name, "start")]
                                 ? 'opacity-30 cursor-not-allowed'
-                                : 'text-[#00ff14] hover:bg-[#00ff14]/10 hover:text-[#00ff14]'
+                                : 'text-[#005012] hover:bg-[#005012]/10 hover:text-[#005012]'
                             }`}
                             disabled={bot.status === 'online' || actionInProgress[getActionKey(bot.name, "start")]}
                           >
@@ -545,7 +545,7 @@ export default function Home() {
             {selectedBot && (
               <div className="mt-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
-                  <h2 className="text-lg font-semibold flex items-center gap-2 text-[#00ff14]">
+                  <h2 className="text-lg font-semibold flex items-center gap-2 text-[#005012]">
                     <Terminal className="w-5 h-5" />
                     Console: {selectedBot}
                   </h2>
@@ -577,7 +577,7 @@ export default function Home() {
                 >
                   {isLoadingLogs && !logs[selectedBot]?.length ? (
                     <div className="flex items-center justify-center h-full">
-                      <Loader2 className="w-6 h-6 animate-spin text-[#00ff14]" />
+                      <Loader2 className="w-6 h-6 animate-spin text-[#005012]" />
                     </div>
                   ) : (
                     logs[selectedBot]?.map((log, index) => (

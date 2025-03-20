@@ -3,6 +3,26 @@
       {
         "source": "/api/bots",
         "destination": "http://104.234.224.196:4000/bots"
+      },
+      {
+        "source": "/api/bots/start",
+        "destination": "http://104.234.224.196:4000/bots/start"
+      },
+      {
+        "source": "/api/bots/stop",
+        "destination": "http://104.234.224.196:4000/bots/stop"
+      },
+      {
+        "source": "/api/bots/restart",
+        "destination": "http://104.234.224.196:4000/bots/restart"
+      },
+      {
+        "source": "/api/bots/memory-limit",
+        "destination": "http://104.234.224.196:4000/bots/memory-limit"
+      },
+      {
+        "source": "/api/bots/logs/:path*",
+        "destination": "http://104.234.224.196:4000/bots/logs/:path*"
       }
     ]
   }
