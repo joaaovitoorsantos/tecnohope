@@ -74,7 +74,7 @@ interface BotLogs {
 }
 
 // Constantes para o servidor
-const API_SERVER = 'http://104.234.224.196:4000';
+const API_SERVER = '/api';
 
 export default function Home() {
   const [bots, setBots] = useState<Bot[]>([]);

@@ -23,6 +23,29 @@
       {
         "source": "/api/bots/logs/:path*",
         "destination": "http://104.234.224.196:4000/bots/logs/:path*"
+      },
+      {
+        "source": "/api/:path*",
+        "destination": "http://104.234.224.196:4000/:path*"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/api/(.*)",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          },
+          {
+            "key": "Access-Control-Allow-Methods",
+            "value": "GET, POST, PUT, DELETE, OPTIONS"
+          },
+          {
+            "key": "Access-Control-Allow-Headers",
+            "value": "Content-Type, Authorization"
+          }
+        ]
       }
     ]
   }

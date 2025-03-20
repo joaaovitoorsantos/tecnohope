@@ -18,7 +18,8 @@ interface Message {
   embeds: any[];
 }
 
-const API_SERVER = 'http://104.234.224.196:4000';
+// Usando o proxy da Vercel
+const API_SERVER = '/api';
 
 export default function TranscriptViewer() {
   const router = useRouter();
